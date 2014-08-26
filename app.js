@@ -1,11 +1,16 @@
-(function(express, gcm, bodyParser, redis, keys){
+(function(express, gcm, bodyParser, redis, keys, apn){
     var app = express(),
         sender = new gcm.Sender(keys.gcmSender),
         redisClient = redis.createClient(),
-        clientIDsSetName = 'clientIDs';
+        clientIDsSetName = 'clientIDs',
+        iOSClientIDsSetName = 'iOSClientIDs',
+        apnConnection = new apn.Connection({}),
+        myDevice = new apn.Device(keys.apnSender);
 
     var clientIDsMap = {},
-        clientIDs = [];
+        clientIDs = [],
+        iOSClientIDsMap = {"f44182de 1688fcd9 27b87925 547b5035 0bfbbc83 2d415c1e a5e48a59 3616ef57":true},
+        iOSClientIDs = ["f44182de 1688fcd9 27b87925 547b5035 0bfbbc83 2d415c1e a5e48a59 3616ef57"];
 
     redisClient.on('error', function(err) {
       console.log('Redis Error: ' + err);
@@ -41,6 +46,11 @@
       fn();
     }
 
+    function isValidiOSID(id, fn){
+      // TODO: actually validate the id
+      fn();
+    }
+
     function saveID(id) {
       if(!clientIDsMap[id]){
         isValidID(id, function(){
@@ -51,36 +61,42 @@
       }
     }
 
+    function saveiOSID(id) {
+      if(!iOSClientIDsMap[id]){
+        isValidiOSID(id, function(){
+          iOSClientIDsMap[id] = true;
+          iOSClientIDs.push(id);
+          redisClient.sadd(iOSClientIDsSetName, id);
+        })
+      }
+    }
+
     app.use(bodyParser());
 
     /*
      * i forgot what i was going to write here... 
      */
-    app.route('/')
+    app.route('/register/android')
         .post(function(req, res, next){
             var body = req.body,
                 data = body.data,
                 clientID = body.id;
             console.log('clientID = ' + clientID);  
             saveID(clientID);
-           // var message = newMessage({message:"Hey, great. Thanks for coming."}); //newMessage(data);
-  
-           // /**
-           //  * Params: message-literal, registrationIds-array, No. of retries, callback-function
-           //  **/
-           // sender.send(message, registrationIds, 4, function (err, result) {
-           //   if(err){
-           //     console.log("Yep, there was an error... the regid was " + theOnlyId);
-           //     console.log(err);
-           //   }
-
-           //     console.log(result);
-           // });
+            res.send(200);
+        });
+    app.route('/register/ios')
+        .post(function(req, res, next){
+            var body = req.body,
+                data = body.data,
+                clientID = body.id;
+            console.log('ios clientID = ' + clientID);  
+            saveiOSID(clientID);
             res.send(200);
         });
     app.route('/broadcast/:text')
       .get(function(req, res, next){
-        var text = req.params.text;
+            var text = req.params.text;
             var message = newMessage({message:text}); 
   
             var registrationIds = clientIDs;
@@ -97,6 +113,25 @@
                 console.log("Text: "+ text);
                 console.log(result);
             });
+
+            /*
+              Send to iOS devices
+             */
+
+            for(var i = 0; i < iOSClientIDs.length; i++){
+              var deviceID = iOSClientIDs[i];
+              var myDevice = new apn.Device(deviceID);
+
+              var note = new apn.Notification();
+
+              note.expiry = Math.floor(Date.now() / 1000) + 3600;
+              note.sound = "ping.aiff";
+              note.alert = message;
+              note.payload = {'messageFrom': 'your mother'};
+
+              apnConnection.pushNotification(note, myDevice);
+            }
+
             res.send(200);
       })
     
@@ -105,4 +140,4 @@
         console.log('Express server listening on port %s', port);
     });
 }(require('express'), require('node-gcm'), require('body-parser'),
-  require('redis'), require('./keys')));
+  require('redis'), require('./keys'), require("apn")));

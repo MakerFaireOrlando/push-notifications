@@ -2,6 +2,6 @@
   'use strict'
 
   var Keys = {};
-  Keys.gcmSender = 'ENTER KEY HERE'
+  Keys.gcmSender = 'ENTER GCM KEY HERE';
   module.exports = Keys;
 }(module));
