@@ -3,6 +3,10 @@ This server allows registration of android and iOS devices and push notification
 
 ## Setting up GCM
 * Todo
+* Add your key to the keys.js.template
+```
+mv keys.js.template keys.js
+```
 
 ## Setting up APNs
 * Todo
