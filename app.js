@@ -4,8 +4,7 @@
         redisClient = redis.createClient(),
         clientIDsSetName = 'clientIDs',
         iOSClientIDsSetName = 'iOSClientIDs',
-        apnConnection = new apn.Connection({}),
-        myDevice = new apn.Device(keys.apnSender);
+        apnConnection = new apn.Connection({});
 
     var clientIDsMap = {},
         clientIDs = [],
