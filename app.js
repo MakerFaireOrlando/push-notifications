@@ -125,7 +125,8 @@
 
               note.expiry = Math.floor(Date.now() / 1000) + 3600;
               note.sound = "ping.aiff";
-              note.alert = message;
+              note.alert = text;
+              console.log('sending message to iOS device: ' + deviceID)
               note.payload = {'messageFrom': 'your mother'};
 
               apnConnection.pushNotification(note, myDevice);
